@@ -39,16 +39,15 @@ export async function POST(request) {
     let translatedHtml = '';
     let characters = 0;
 
-    // محاولة ترجمة الـ HTML بأمان، وفي حال حدوث أي خلل، التحويل المباشر لترجمة النص الخالي من الأخطاء
     try {
       const result = await translateHtml(extracted.html || `<p>${extracted.content}</p>`, { source, target });
       translatedHtml = result.translatedHtml;
       characters = result.characters || (extracted.content ? extracted.content.length : 0);
     } catch (htmlErr) {
-      console.warn('[translate] HTML translation fallback triggered:', htmlErr);
+      console.warn('[translate] HTML fallback triggered:', htmlErr);
       const rawText = extracted.content || extracted.title || 'محتوى الصفحة';
       const translatedText = await translateText(rawText, target, source);
-      translatedHtml = `<div style="white-space: pre-wrap; font-family: sans-serif; line-height: 1.6;">${translatedText}</div>`;
+      translatedHtml = `<div style="white-space: pre-wrap; font-family: sans-serif; line-height: 1.6; font-size: 16px;">${translatedText}</div>`;
       characters = rawText.length;
     }
 
@@ -65,10 +64,8 @@ export async function POST(request) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
     console.error('[translate] unexpected error caught gracefully:', err);
-    
-    // الملاذ الآمن المظلي بدلاً من إرجاع خطأ يمنع العرض
     return NextResponse.json({ 
-      error: err.message || 'تعذر إكمال عملية الترجمة لهذا الرابط تحديداً، يرجى إعادة المحاولة.' 
+      error: err.message || 'تعذر إكمال عملية الترجمة، يرجى إعادة المحاولة.' 
     }, { status: 400 });
   }
 }
