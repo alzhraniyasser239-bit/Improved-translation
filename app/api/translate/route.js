@@ -6,6 +6,11 @@ import { translateText } from '@/lib/translation/providers';
 import { isSupported } from '@/lib/languages';
 import { getProviderId } from '@/lib/translation/providers';
 
+// مكتبات معالجة الملفات المختلفة
+import pdfParse from 'pdf-parse';
+import mammoth from 'mammoth';
+import * as XLSX from 'xlsx';
+
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
@@ -22,20 +27,85 @@ export async function POST(request) {
     if (source === target) throw new AppError('لغة المصدر ولغة الهدف متطابقتان.');
 
     let extracted;
+
+    // --- 1. معالجة الروابط (URL) ---
     if (mode === 'url') {
       const url = String(form.get('url') || '').trim();
       if (!url) throw new AppError('أدخل عنوان الصفحة المراد ترجمتها.');
       extracted = await extractFromUrl(/^https?:\/\//i.test(url) ? url : `https://${url}`);
+
+    // --- 2. معالجة الملفات (Files) بكل أنواعها ---
     } else if (mode === 'file') {
       const file = form.get('file');
       if (!file || typeof file === 'string') throw new AppError('اختر ملفاً للترجمة.');
       const maxMb = Number(process.env.MAX_UPLOAD_MB) || 15;
       if (file.size > maxMb * 1024 * 1024) throw new AppError(`حجم الملف أكبر من ${maxMb} ميغابايت.`, 413);
-      extracted = await extractFromFile(file, { source });
+
+      const fileName = file.name || '';
+      const ext = fileName.split('.').pop()?.toLowerCase();
+      const buffer = Buffer.from(await file.arrayBuffer());
+
+      let extractedText = '';
+      let extractedHtml = '';
+
+      // أ) ملفات الـ PDF
+      if (ext === 'pdf' || file.type === 'application/pdf') {
+        const pdfData = await pdfParse(buffer);
+        extractedText = pdfData.text?.trim() || '';
+        if (!extractedText) throw new AppError('لم نتمكن من قراءة أي نصوص داخل ملف الـ PDF (قد يكون صور فقط).');
+        
+        extractedHtml = extractedText
+          .split('\n')
+          .filter(l => l.trim())
+          .map(l => `<p>${l.trim()}</p>`)
+          .join('');
+
+      // ب) ملفات Word (.docx)
+      } else if (ext === 'docx') {
+        const result = await mammoth.convertToHtml({ buffer });
+        extractedHtml = result.value;
+        extractedText = result.value.replace(/<[^>]+>/g, ' ');
+
+      // ج) ملفات Excel (.xlsx, .xls, .csv)
+      } else if (['xlsx', 'xls', 'csv'].includes(ext)) {
+        const workbook = XLSX.read(buffer, { type: 'buffer' });
+        let fullCsv = '';
+        workbook.SheetNames.forEach(sheetName => {
+          const sheet = workbook.Sheets[sheetName];
+          fullCsv += XLSX.utils.sheet_to_csv(sheet) + '\n\n';
+        });
+        extractedText = fullCsv.trim();
+        extractedHtml = `<pre>${extractedText}</pre>`;
+
+      // د) ملفات النصوص العادية (.txt, .md, .json)
+      } else if (['txt', 'md', 'json', 'srt'].includes(ext) || file.type.startsWith('text/')) {
+        extractedText = buffer.toString('utf-8');
+        extractedHtml = `<pre style="white-space: pre-wrap;">${extractedText}</pre>`;
+
+      // هـ) باقي الملفات: الاعتماد على المحول الافتراضي عندك
+      } else {
+        try {
+          extracted = await extractFromFile(file, { source });
+        } catch (e) {
+          throw new AppError('صيغة الملف غير مدعومة حالياً.');
+        }
+      }
+
+      // إذا تم استخراج محتوى بواسطة معالجنا للملفات الشائعة
+      if (extractedText || extractedHtml) {
+        extracted = {
+          title: fileName,
+          content: extractedText,
+          html: extractedHtml || `<p>${extractedText}</p>`,
+          originalHtml: extractedHtml || `<p>${extractedText}</p>`
+        };
+      }
+
     } else {
       throw new AppError('نوع الإدخال غير معروف.');
     }
 
+    // --- 3. مرحلة الترجمة لجميع المدخلات ---
     let translatedHtml = '';
     let characters = 0;
 
