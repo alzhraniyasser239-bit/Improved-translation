@@ -1,0 +1,84 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: 234 239 243;
+  --surface: 255 255 255;
+  --ink: 16 32 45;
+  --muted: 91 107 120;
+  --line: 208 218 226;
+  --cobalt: 47 84 235;
+  --marigold: 224 158 20;
+  --danger: 192 49 49;
+}
+
+.dark {
+  --bg: 9 24 34;
+  --surface: 16 37 51;
+  --ink: 231 238 243;
+  --muted: 140 160 175;
+  --line: 34 56 71;
+  --cobalt: 120 150 255;
+  --marigold: 245 183 55;
+  --danger: 255 128 128;
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-bg font-sans text-ink antialiased;
+    /* keep content clear of notches in landscape / standalone mode */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  :focus-visible {
+    outline: 2px solid rgb(var(--cobalt));
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply bg-cobalt text-white hover:brightness-110;
+  }
+  .dark .btn-primary {
+    color: #091822;
+  }
+  .btn-ghost {
+    @apply border border-line bg-surface text-ink hover:border-cobalt;
+  }
+  .field {
+    /* 16px on phones stops iOS Safari from zooming the page when a field is focused */
+    @apply min-h-[44px] w-full rounded-lg border border-line bg-surface px-3 py-2.5 text-base text-ink placeholder:text-muted sm:text-sm;
+  }
+}
+
+/* Loading shimmer is the only ambient motion in the app */
+@keyframes sweep {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, rgb(var(--line) / 0.5) 25%, rgb(var(--line) / 0.9) 50%, rgb(var(--line) / 0.5) 75%);
+  background-size: 200% 100%;
+  animation: sweep 1.8s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; }
+  * { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+}

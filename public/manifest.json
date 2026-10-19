@@ -1,0 +1,39 @@
+{
+  "id": "/",
+  "name": "المترجم الذكي للمستندات والصفحات",
+  "short_name": "المترجم",
+  "description": "ترجم صفحات الويب والمستندات مع الحفاظ على تنسيقها، ثم حمّل النتيجة بصيغة PDF أو Word أو نص أو HTML.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#EAEFF3",
+  "theme_color": "#2F54EB",
+  "lang": "ar",
+  "categories": [
+    "productivity",
+    "utilities",
+    "education"
+  ],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "dir": "rtl"
+}
