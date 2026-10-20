@@ -3,10 +3,9 @@ import { AppError } from '@/lib/errors';
 import { extractFromFile, extractFromUrl } from '@/lib/extract';
 import { translateHtml } from '@/lib/html/translate-html';
 import { isSupported } from '@/lib/languages';
-import { getProviderId } from '@/lib/translation/providers';
 
 export const runtime = 'nodejs';
-export const maxDuration = 60;
+export const maxDuration = 60; // 60 seconds max for Vercel
 
 export async function POST(request) {
   try {
@@ -16,51 +15,46 @@ export async function POST(request) {
     const target = String(form.get('target') || 'ar');
 
     if (!isSupported(source) || !isSupported(target) || target === 'auto') {
-      throw new AppError('اختر لغات الترجمة بشكل صحيح.');
+      throw new AppError('اختر لغة مصدر ولغة هدف صحيحتين للترجمة.');
     }
 
     let extracted;
     if (mode === 'url') {
       const url = String(form.get('url') || '').trim();
-      if (!url) throw new AppError('أدخل رابطاً صحيحاً للترجمة.');
+      if (!url) throw new AppError('يرجى إدخال عنوان الصفحة المراد ترجمتها.');
       extracted = await extractFromUrl(/^https?:\/\//i.test(url) ? url : `https://${url}`);
     } else if (mode === 'file') {
       const file = form.get('file');
-      if (!file || typeof file === 'string') throw new AppError('اختر ملفاً صحيحاً.');
+      if (!file || typeof file === 'string') throw new AppError('يرجى اختيار ملف صحيح للترجمة.');
       extracted = await extractFromFile(file, { source });
     } else {
       throw new AppError('نوع الإدخال غير معروف.');
     }
 
-    // إذا كانت النتيجة تحتوي على مربع توضيح سبب الرفض
-    if (extracted.html && (extracted.html.includes('سبب عدم الترجمة') || extracted.html.includes('سبب عدم ظهور المحتوى') || extracted.html.includes('سبب الفشل'))) {
-      return NextResponse.json({
-        title: extracted.title,
-        originalHtml: extracted.html,
-        translatedHtml: extracted.html,
-        characters: extracted.content ? extracted.content.length : 0,
-        provider: 'system'
-      });
-    }
+    // تطبيق محرك الترجمة المرآسية المتقدم الذي أنشأته
+    const { html: translatedHtml, stats } = await translateHtml(extracted.html, {
+      targetLang: target,
+      sourceLang: source === 'auto' ? undefined : source,
+      deadlineMs: 50000 // الأمان ضمن حدود Vercel
+    });
 
-    // تنفيذ الترجمة الكاملة للـ HTML
-    const { html: translatedHtml, characters } = await translateHtml(extracted.html, { source, target });
+    console.log('[Translation Stats]:', stats);
 
     return NextResponse.json({
       title: extracted.title,
       originalHtml: extracted.originalHtml || extracted.html,
       translatedHtml: translatedHtml || extracted.html,
-      characters: characters || 100,
-      provider: getProviderId ? getProviderId() : 'google',
+      characters: stats ? stats.textNodes * 10 : 100,
+      provider: 'google-v2'
     });
 
-  } catch (err) {
+r  } catch (err) {
     if (err instanceof AppError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
-    console.error('[translate] error:', err);
+    console.error('[translate route error]:', err);
     return NextResponse.json({ 
-      error: err.message || 'حدث خطأ أثناء الترجمة.' 
+      error: err.message || 'حدث خطأ غير متوقع أثناء معالجة الترجمة.' 
     }, { status: 400 });
   }
 }
