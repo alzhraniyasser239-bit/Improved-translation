@@ -16,24 +16,24 @@ export async function POST(request) {
     const target = String(form.get('target') || 'ar');
 
     if (!isSupported(source) || !isSupported(target) || target === 'auto') {
-      throw new AppError('اختر لغة مصدر ولغة هدف صحيحتين.');
+      throw new AppError('اختر لغات الترجمة بشكل صحيح.');
     }
 
     let extracted;
     if (mode === 'url') {
       const url = String(form.get('url') || '').trim();
-      if (!url) throw new AppError('أدخل عنوان الصفحة المراد ترجمتها.');
+      if (!url) throw new AppError('أدخل رابطاً صحيحاً للترجمة.');
       extracted = await extractFromUrl(/^https?:\/\//i.test(url) ? url : `https://${url}`);
     } else if (mode === 'file') {
       const file = form.get('file');
-      if (!file || typeof file === 'string') throw new AppError('اختر ملفاً للترجمة.');
+      if (!file || typeof file === 'string') throw new AppError('اختر ملفاً صحيحاً.');
       extracted = await extractFromFile(file, { source });
     } else {
       throw new AppError('نوع الإدخال غير معروف.');
     }
 
-    // إذا كان الناتج يحتوي على بطاقة تنبيه بسبب حظر أو خطأ حقيقي، يُرجع مباشرة دون معالجة إضافية
-    if (extracted.html && (extracted.html.includes('سبب عدم إكمال الترجمة') || extracted.html.includes('سبب عدم ظهور المحتوى') || extracted.html.includes('سبب الفشل'))) {
+    // إذا كانت النتيجة تحتوي على مربع توضيح سبب الرفض
+    if (extracted.html && (extracted.html.includes('سبب عدم الترجمة') || extracted.html.includes('سبب عدم ظهور المحتوى') || extracted.html.includes('سبب الفشل'))) {
       return NextResponse.json({
         title: extracted.title,
         originalHtml: extracted.html,
@@ -43,6 +43,7 @@ export async function POST(request) {
       });
     }
 
+    // تنفيذ الترجمة الكاملة للـ HTML
     const { html: translatedHtml, characters } = await translateHtml(extracted.html, { source, target });
 
     return NextResponse.json({
@@ -59,7 +60,7 @@ export async function POST(request) {
     }
     console.error('[translate] error:', err);
     return NextResponse.json({ 
-      error: err.message || 'حدث خطأ غير متوقع أثناء معالجة الطلب.' 
+      error: err.message || 'حدث خطأ أثناء الترجمة.' 
     }, { status: 400 });
   }
 }
