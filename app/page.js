@@ -23,7 +23,7 @@ export default function Home() {
           © 2026 جميع الحقوق محفوظة | تصميم وتطوير: <span style={{ fontWeight: '600', color: '#3b82f6' }}>وهاج الزهراني</span>
         </p>
         <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', fontSize: '13px' }}>
-          <a href="https://www.snapchat.com/add/WE7AG" target="_blank" rel="noopener noreferrer" style={{ color: '#eab308', textDecoration: 'none' }}>
+          <a href="https://www.snapchat.com/add/WE7AJ" target="_blank" rel="noopener noreferrer" style={{ color: '#eab308', textDecoration: 'none' }}>
             👻 سناب شات: WE7AJ
           </a>
         </div>
