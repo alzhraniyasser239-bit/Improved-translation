@@ -24,7 +24,7 @@ export default function Home() {
         </p>
         <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', fontSize: '13px' }}>
           <a href="https://www.snapchat.com/add/WE7AG" target="_blank" rel="noopener noreferrer" style={{ color: '#eab308', textDecoration: 'none' }}>
-            👻 سناب شات: WE7AG
+            👻 سناب شات: WE7AJ
           </a>
         </div>
       </footer>
